@@ -1,0 +1,313 @@
+//Animation _test
+#include "user32.as"
+//ｲﾝｸﾙｩｳｳｳﾄﾞ　ﾊﾟﾜｰｰｰ!!!
+//(ユーザー定義)ｶﾝｽｳﾅﾝﾀﾞｲ?ﾒｲﾚｲﾅﾝﾀﾞｲ？　ﾄﾞｯﾁﾅﾝﾀﾞｲｯ!
+
+*startup
+
+	buffer 1,ginfo(20),ginfo(21)//アプリの画面
+	celload "bk1.png",2//画像
+	celload "bk1_b.png",3//面倒なので元からぼかし画像を用意しておく
+	celload "battery.png",4//充電されている画像
+	buffer 5,ginfo(20)*2,ginfo(21)*2//仮置き場
+
+	screen 0,ginfo(20),ginfo(21)
+	GetWindowLong hwnd,-16
+	SetWindowLong hwnd,-16,stat | $10000 | $40000:width 480,960//サイズ可変、最大化有効
+	title "テスト用ウィンドウだよ"
+
+
+	icon_size=128//アイコンの大きさ
+	EaseTimes=32//イージングにかける時間
+	DeskGEaseTimes=int(EaseTimes/2)//デスクトップのイージング時間
+	DeskiconEdge=40//デスクトップに置くアイコン左上座標
+	DockEdge=24//dockの余白
+	HomeBar=15//ホームバーのサイズ
+	
+	goto *mainloop
+
+
+
+
+
+
+
+
+
+
+#module// 角丸四角形を描画する
+	#define ctype max( %1, %2 ) ( %1 )*( %1 > %2 ) + ( %2 )*( %1 <= %2 )
+	#define ctype min( %1, %2 ) ( %1 )*( %1 < %2 ) + ( %2 )*( %1 >= %2 )
+	#const DEFAULT_R 20
+   //rboxf (左上X座標), (左上Y座標), (右下X座標), (右下Y座標), (角の半径)
+
+	#deffunc rboxf int _x1, int _y1, int _x2, int _y2, int _r
+  	 x1 = min(_x1, _x2) : x2 = max(_x1, _x2)
+   	 y1 = min(_y1, _y2) : y2 = max(_y1, _y2)
+   	 box_width = x2 - x1 : box_height = y2 - y1
+
+    if ( _r <= 0 ) {
+        r = DEFAULT_R
+    } else {
+        r = _r
+    }
+    r = min( r, min( box_width / 2, box_height / 2 ) )
+
+    boxf x1, y1+r, x2, y2-r
+    boxf x1+r, y1, x2-r, y2
+    
+   		 repeat 4
+    	    x = x1 + ( cnt \ 2 ) * ( box_width - r * 2 + 1)
+    	    y = y1 + ( cnt / 2 ) * ( box_height - r * 2 + 1 )
+    	    circle x, y, x + r * 2, y + r * 2
+   		 loop
+    return
+#global
+
+
+
+#module
+
+	#deffunc Taskbar //タスクバー
+		pos 0,0:gmode 3,,,256:gcopy 3,0,0,ginfo(12),40//ぼかし
+		color 255,255,255:font "Noto Sans JP",20,16:pos WindowX@-64,2:gmode 2:celput 4:gmode
+		font "Noto Sans JP",20,16:pos 15,7:mes ""+TimeData2@+"    "+TimeDays2@+""
+	return
+
+#global
+
+
+
+
+
+
+*mainloop
+
+	gsel 0:redraw 0:color 255,255,255:boxf
+
+	gosub *BackGrounds
+	gosub *Desktop
+	gosub *App_test
+	gosub *Dock
+
+	
+	
+	redraw 1:await 16:goto *mainloop
+
+
+
+*BackGrounds
+	Stick System_Key_left_Click//左クリックの取得
+
+
+	//時刻の取得----------------------------------------------------------------------------------------------------------------------
+			TimeData1 = strf("%02d:", gettime(4))
+			TimeData1 += strf("%02d:", gettime(5))
+			TimeData1 += strf("%02d", gettime(6))
+		//↓秒がない版
+			TimeData2 = strf("%02d:", gettime(4))
+			TimeData2 += strf("%02d", gettime(5))
+		//↓曜日、日
+			DayWeek="Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
+			MoonName="Error","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"
+			TimeDays1=""+gettime(0)+"."+gettime(1)+"."+gettime(3)+"("+DayWeek.gettime(2)+")"
+			TimeDays2=""+DayWeek.gettime(2)+" "+MoonName.gettime(1)+" "+gettime(3)+""
+		
+		//TimeDate1=時+分+秒 TimeData2=時+分 TimeDays1=年+月+日+曜日 TimeDays2=曜日+月+日
+
+
+	WindowX=ginfo(12):WindowY=ginfo(13)//ウィンドウのサイズを代入
+		
+	return
+
+
+
+
+
+
+
+
+
+
+
+*Desktop//デスクトッポ。トッポよりポッキー派です。
+
+
+	//ぼかし
+	if App_On=0{
+		
+		setease 256,0,ease_quartic_in
+		DeskGmode=getease(Opened,EaseTimes)
+		
+		}else{
+
+		setease 0,256,ease_quartic_out
+		DeskGmode=getease(Closed,EaseTimes)
+		
+		}
+	
+	color 0,0,0:boxf
+	gmode 3,,,256:pos 0,0:celput 2
+	gmode 3,,,DeskGmode:pos 0,0:celput 3
+
+
+	
+	Taskbar//タスクバー
+	
+	return
+
+
+
+
+*App_test
+
+	
+	gsel 1
+
+
+
+
+	color 255,255,255:boxf
+	Taskbar
+	color 0,0,0:font "Noto Sans JP",32:mes "設定"
+
+	font "Noto Sans JP Light",16:mes "設定アプリという名のただの動作確認画面なのだー！"
+
+
+
+
+	
+	gsel 0
+	
+	if System_Key_left_Click=256{
+		if App_On=1{App_On=0}else{App_On=1}}
+
+	
+
+
+	if App_On=0{
+
+		if Opened<=EaseTimes{Opened+=1}
+		Closed=0
+
+
+		setease 0,DeskiconEdge,ease_quartic_out
+		AppX1=getease(Opened,EaseTimes)
+		AppY1=AppX1
+
+
+		setease ginfo(12),icon_size,ease_quartic_out
+		AppX2=getease(Opened,EaseTimes)
+
+		setease ginfo(13),icon_size,ease_quartic_out
+		AppY2=getease(Opened,EaseTimes)
+
+
+		setease 1,16,ease_quartic_out
+		Corner=getease(Opened,EaseTimes)
+
+
+		//ついでにアプリの透過度も！
+		setease 256,0,ease_quartic_out
+		AppGmode=getease(Opened,EaseTimes)
+
+
+		
+		}else{
+
+
+
+		if Closed<=EaseTimes{Closed+=1}
+		Opened=0
+
+		setease DeskiconEdge,0,ease_quartic_out
+		AppX1=getease(Closed,EaseTimes)
+		AppY1=AppX1
+
+
+		setease icon_size,ginfo(12),ease_quartic_out
+		AppX2=getease(Closed,EaseTimes)
+
+		setease icon_size,ginfo(13),ease_quartic_out
+		AppY2=getease(Closed,EaseTimes)
+
+
+		setease 16,1,ease_quartic_out
+		Corner=getease(Closed,EaseTimes)
+
+		//ついでにアプリの透過度も！
+		setease 0,256,ease_quartic_out
+		AppGmode=getease(Closed,EaseTimes)
+
+		
+			}
+
+
+	
+	color 255,255,255:rboxf AppX1,AppY1,AppX2,AppY2,Corner//Windowとボタンを描画
+
+
+	gsel 5:color 255,255,255:boxf
+	pos 0,0:gzoom  AppX2-AppX1,AppY2-AppY1,1,0,0,WindowX,WindowY,1//アプリ画面を仮置きWindowにコピー 
+	gsel 0
+
+	pos AppX1,AppX1:gmode 3,,,AppGmode:gcopy 5,0,0,AppX2-AppX1,AppY2-AppY1//アプリ画面をメインWindowにコピー
+	
+	return
+
+
+
+
+
+
+*Dock
+
+	DockEdge=24//dockの余白
+	HomeBar=15//ホームバーのサイズ
+		//color 125,125,125:rboxf DockEdge,ginfo(13)-DockEdge-96,ginfo(12)-DockEdge,ginfo(13)-DockEdge,20//Dockの描画
+		//color 125,125,125:rboxf ginfo(12)/2-64,ginfo(13)-DockEdge/2,ginfo(12)/2+64,ginfo(13)-7,5//ホームバーの描画
+
+	if App_On=0{
+
+		setease ginfo(12)/2-64,DockEdge,ease_quartic_out
+		DockX1=getease(Opened,EaseTimes)
+
+		setease ginfo(13)-DockEdge/2,ginfo(13)-DockEdge-96,ease_quartic_out
+		DockY1=getease(Opened,EaseTimes)
+
+
+		setease ginfo(12)/2+64,ginfo(12)-DockEdge,ease_quartic_out
+		DockX2=getease(Opened,EaseTimes)
+
+		setease ginfo(13)-7,ginfo(13)-DockEdge,ease_quartic_out
+		DockY2=getease(Opened,EaseTimes)
+
+
+		setease 5,20,ease_quartic_out
+		DockCorner=getease(Opened,EaseTimes)
+
+
+		
+		}else{
+
+		setease DockEdge,ginfo(12)/2-64,ease_quartic_out
+		DockX1=getease(Closed,EaseTimes)
+
+
+		setease ginfo(13)-DockEdge-96,ginfo(13)-DockEdge/2,ease_quartic_out
+		DockY1=getease(Closed,EaseTimes)
+
+		setease ginfo(12)-DockEdge,ginfo(12)/2+64,ease_quartic_out
+		DockX2=getease(Closed,EaseTimes)
+
+		setease ginfo(13)-DockEdge,ginfo(13)-7,ease_quartic_out
+		DockY2=getease(Closed,EaseTimes)
+
+		setease 5,20,ease_quartic_out
+		DockCorner=getease(Closed,EaseTimes)
+			}
+
+
+	color 205,205,205:rboxf DockX1,DockY1,DockX2,DockY2,DockCorner//ホームバー/dockの描画
+	
+	return
